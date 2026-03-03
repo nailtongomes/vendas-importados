@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{ title }} - Imports Sys</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dt-container {
+            font-size: 0.875rem;
+        }
+
+        table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control:before,
+        table.dataTable.dtr-inline.collapsed>tbody>tr>th.dtr-control:before {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen pb-20 md:pb-0">
+
+    <!-- Desktop Sidebar / Topbar -->
+    <nav class="hidden md:flex bg-slate-900 text-white shadow-lg w-full sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-6">
+                    <a href="{{ url_for('web.inventory') }}"
+                        class="font-black text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 mr-4">N3W</a>
+                    <a href="{{ url_for('web.dashboard') }}"
+                        class="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-800 {% if request.endpoint == 'web.dashboard' %}bg-slate-800 text-blue-400{% endif %}">Painel</a>
+                    <a href="{{ url_for('web.inventory') }}"
+                        class="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-800 {% if request.endpoint == 'web.inventory' %}bg-slate-800 text-blue-400{% endif %}">Estoque</a>
+                    <a href="{{ url_for('web.lots') }}"
+                        class="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-800 {% if request.endpoint == 'web.lots' %}bg-slate-800 text-blue-400{% endif %}">Lotes</a>
+                    <a href="{{ url_for('web.sales') }}"
+                        class="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-800 {% if request.endpoint == 'web.sales' %}bg-slate-800 text-blue-400{% endif %}">Vendas</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Bottom Tab Bar -->
+    <nav
+        class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 z-50 flex justify-around items-center h-16 pb-safe text-xs font-semibold text-slate-500">
+        <a href="{{ url_for('web.dashboard') }}"
+            class="flex flex-col items-center justify-center w-full h-full transition-colors {% if request.endpoint == 'web.dashboard' %}text-blue-600{% endif %}">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+            </svg>
+            Painel
+        </a>
+        <a href="{{ url_for('web.inventory') }}"
+            class="flex flex-col items-center justify-center w-full h-full transition-colors {% if request.endpoint == 'web.inventory' %}text-blue-600{% endif %}">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+            Estoque
+        </a>
+        <a href="{{ url_for('web.lots') }}"
+            class="flex flex-col items-center justify-center w-full h-full transition-colors {% if request.endpoint == 'web.lots' %}text-blue-600{% endif %}">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                </path>
+            </svg>
+            Lotes
+        </a>
+        <a href="{{ url_for('web.sales') }}"
+            class="flex flex-col items-center justify-center w-full h-full transition-colors {% if request.endpoint == 'web.sales' %}text-blue-600{% endif %}">
+            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                </path>
+            </svg>
+            Vendas
+        </a>
+    </nav>
+
+    <!-- Main Content wrapper -->
+    <main class="flex-grow w-full max-w-7xl mx-auto p-4 sm:p-6 mt-4 md:mt-6 animate-fade-in-up">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- App-style Toast Notification -->
+    <div id="toast"
+        class="fixed top-5 left-1/2 transform -translate-x-1/2 opacity-0 px-6 py-3 bg-slate-900 text-white font-medium text-sm rounded-full shadow-2xl transition-all duration-300 z-[100] flex items-center translate-y-[-20px] pointer-events-none">
+        <span id="toastIcon" class="mr-2"></span>
+        <span id="toastMsg">Salvo com sucesso!</span>
+    </div>
+
+    <script>
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+
+            if (isError) {
+                t.className = `fixed top-10 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-red-600 text-white font-medium text-sm rounded-full shadow-2xl transition-all duration-300 z-[100] flex items-center opacity-100 translate-y-0`;
+                document.getElementById('toastIcon').innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else {
+                t.className = `fixed top-10 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-slate-900 text-white font-medium text-sm rounded-full shadow-2xl transition-all duration-300 z-[100] flex items-center opacity-100 translate-y-0`;
+                document.getElementById('toastIcon').innerHTML = `<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            }
+
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translate(-50%, -20px)';
+            }, 3000);
+        }
+    </script>
+    <style>
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s ease-out forwards;
+        }
+
+        /* Input & Select premium styling */
+        input:not([type="checkbox"]):not([type="radio"]),
+        select {
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            border-radius: 0.75rem;
+            padding: 0.625rem 0.875rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            background-color: #ffffff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Modern Modals */
+        .modal-card {
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Vendas</h1>
+    <p class="text-slate-500 mt-1">Acompanhe seus resultados e margens de lucro.</p>
+</div>
+
+<!-- Summary cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="salesSummary">
+    <div
+        class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+        <div class="flex items-center text-green-500 mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7">
+                </path>
+            </svg>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Receita Total</div>
+        </div>
+        <div class="text-3xl font-black text-slate-800" id="summaryRevenue">R$ —</div>
+    </div>
+    <div
+        class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+        <div class="flex items-center text-blue-500 mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Lucro Total</div>
+        </div>
+        <div class="text-3xl font-black text-slate-800" id="summaryProfit">R$ —</div>
+    </div>
+    <div
+        class="bg-indigo-50 p-6 rounded-2xl shadow-sm border border-indigo-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+        <div class="flex items-center text-indigo-500 mb-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
+                </path>
+            </svg>
+            <div class="text-xs font-bold uppercase tracking-wider text-indigo-600">Margem Média</div>
+        </div>
+        <div class="text-3xl font-black text-indigo-700" id="summaryMargin">—%</div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6 overflow-x-auto">
+    <table id="salesTable"
+        class="w-full text-left text-sm display responsive nowrap">
+        <thead>
+            <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                <th class="p-3 font-semibold rounded-tl-lg">Data</th>
+                <th class="p-3 font-semibold">Serial</th>
+                <th class="p-3 font-semibold">Modelo</th>
+                <th class="p-3 font-semibold text-right">Venda (R$)</th>
+                <th class="p-3 font-semibold text-right">Custo (R$)</th>
+                <th class="p-3 font-semibold text-right">Lucro (R$)</th>
+                <th class="p-3 font-semibold text-right">Margem</th>
+                <th class="p-3 font-semibold text-right">Comissão (R$)</th>
+                <th class="p-3 font-semibold rounded-tr-lg">Canal</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let salesData = [];
+
+    function loadSales() {
+        fetch('/api/sales').then(r => r.json()).then(res => {
+            salesData = res.data || [];
+            renderSummary(salesData);
+            renderTable(salesData);
+        });
+    }
+
+    function renderSummary(data) {
+        let totalRevenue = 0, totalProfit = 0;
+        data.forEach(s => {
+            totalRevenue += parseFloat(s.sell_price_brl);
+            totalProfit += parseFloat(s.net_profit);
+        });
+        const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+        document.getElementById('summaryRevenue').textContent = 'R$ ' + totalRevenue.toFixed(2);
+
+        const profitEl = document.getElementById('summaryProfit');
+        profitEl.textContent = 'R$ ' + totalProfit.toFixed(2);
+        profitEl.className = `text-3xl font-black ${totalProfit < 0 ? 'text-red-600' : 'text-slate-800'}`;
+
+        document.getElementById('summaryMargin').textContent = avgMargin.toFixed(2) + '%';
+    }
+
+    function renderTable(data) {
+        if ($.fn.DataTable.isDataTable('#salesTable')) {
+            $('#salesTable').DataTable().destroy();
+        }
+
+        $('#salesTable').DataTable({
+            data: data,
+            columns: [
+                { data: 'sold_at', responsivePriority: 3 },
+                { data: 'serial', responsivePriority: 5 },
+                { data: 'model_label', responsivePriority: 1 },
+                {
+                    data: 'sell_price_brl',
+                    className: 'text-right',
+                    responsivePriority: 2,
+                    render: function (data, type, row) {
+                        if (type !== 'display') return data;
+                        return `R$ <input type="number" step="0.01" class="border rounded p-1 w-24 text-sm text-right edit-price" data-id="${row.id}" value="${parseFloat(data).toFixed(2)}">`;
+                    }
+                },
+                {
+                    data: 'total_cost_brl',
+                    className: 'text-right',
+                    responsivePriority: 6,
+                    render: d => `R$ ${parseFloat(d).toFixed(2)}`
+                },
+                {
+                    data: 'net_profit',
+                    className: 'text-right',
+                    responsivePriority: 2,
+                    render: function (d) {
+                        const val = parseFloat(d);
+                        const cls = val < 0 ? 'text-red-600' : 'text-green-600';
+                        return `<span class="font-bold ${cls}">R$ ${val.toFixed(2)}</span>`;
+                    }
+                },
+                {
+                    data: null,
+                    className: 'text-right',
+                    responsivePriority: 7,
+                    render: function (d) {
+                        const sell = parseFloat(d.sell_price_brl);
+                        const profit = parseFloat(d.net_profit);
+                        const margin = sell > 0 ? (profit / sell) * 100 : 0;
+                        const cls = margin < 0 ? 'text-red-600' : 'text-green-600';
+                        return `<span class="${cls}">${margin.toFixed(1)}%</span>`;
+                    }
+                },
+                {
+                    data: 'commission_brl',
+                    className: 'text-right',
+                    responsivePriority: 8,
+                    render: function (data, type, row) {
+                        if (type !== 'display') return data;
+                        return `R$ <input type="number" step="0.01" class="border rounded p-1 w-20 text-sm text-right edit-commission" data-id="${row.id}" value="${parseFloat(data).toFixed(2)}">`;
+                    }
+                },
+                {
+                    data: 'channel',
+                    responsivePriority: 9,
+                    render: function (data, type, row) {
+                        if (type !== 'display') return data;
+                        return `<input type="text" class="border rounded p-1 w-24 text-sm edit-channel" data-id="${row.id}" value="${data || ''}">`;
+                    }
+                }
+            ],
+            order: [[0, 'desc']],
+            responsive: true,
+            language: {
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json",
+                emptyTable: "Nenhuma venda registrada"
+            }
+        });
+
+        $('#salesTable tbody').off('blur'); // clear previous listeners
+
+        $('#salesTable tbody').on('blur', '.edit-price', function () {
+            updateSale($(this).data('id'), { sell_price_brl: $(this).val() });
+        });
+
+        $('#salesTable tbody').on('blur', '.edit-commission', function () {
+            updateSale($(this).data('id'), { commission_brl: $(this).val() });
+        });
+
+        $('#salesTable tbody').on('blur', '.edit-channel', function () {
+            updateSale($(this).data('id'), { channel: $(this).val() });
+        });
+
+        function updateSale(id, data) {
+            fetch(`/api/sale/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(res => res.json()).then(res => {
+                if (res.success) {
+                    showToast('Atualizado!');
+                    loadSales();
+                } else {
+                    showToast(res.error || 'Erro', true);
+                }
+            });
+        }
+    }
+
+    loadSales();
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Dashboard</h1>
+    <p class="text-slate-500 mt-1">Visão geral do seu negócio e resultados.</p>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpi-cards">
+    <!-- Loaded via JS -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 skeleton">Carregando...</div>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 skeleton">Carregando...</div>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 skeleton">Carregando...</div>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 skeleton">Carregando...</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    fetch('/api/kpis').then(r => r.json()).then(data => {
+        const marginPct = (parseFloat(data.net_margin) * 100).toFixed(2);
+
+        $('#kpi-cards').html(`
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+                <div class="flex items-center text-blue-500 mb-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Estoque (Qtde)</div>
+                </div>
+                <div class="text-3xl font-black text-slate-800">${data.stock_count}</div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+                <div class="flex items-center text-purple-500 mb-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path></svg>
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Estoque (R$)</div>
+                </div>
+                <div class="text-3xl font-black text-slate-800">R$ ${data.stock_value}</div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+                <div class="flex items-center text-green-500 mb-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Lucro Líquido</div>
+                </div>
+                <div class="text-3xl font-black text-green-600">R$ ${data.net_profit}</div>
+            </div>
+            <div class="bg-emerald-50 p-6 rounded-2xl shadow-sm border border-emerald-100 flex flex-col justify-between items-start transition-all hover:shadow-md">
+                <div class="flex items-center text-emerald-600 mb-2">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    <div class="text-xs font-bold uppercase tracking-wider text-emerald-700">Margem Líquida</div>
+                </div>
+                <div class="text-3xl font-black text-emerald-600">${marginPct}%</div>
+            </div>
+        `);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Estoque</h1>
+    <p class="text-slate-500 mt-1">Gerencie suas unidades e atualize o status dos produtos.</p>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6 overflow-x-auto">
+    <table id="inventoryTable"
+        class="w-full text-left text-sm display responsive nowrap">
+        <thead>
+            <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200 bg-slate-50/50">
+                <th class="p-3 font-semibold rounded-tl-lg">Serial</th>
+                <th class="p-3 font-semibold">Modelo</th>
+                <th class="p-3 font-semibold">Holder</th>
+                <th class="p-3 font-semibold">Custo (R$)</th>
+                <th class="p-3 font-semibold">Status</th>
+                <th class="p-3 font-semibold rounded-tr-lg">Ações</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            <!-- Load JSON via JS -->
+        </tbody>
+    </table>
+</div>
+
+<!-- FAB: Nova Unidade -->
+<button id="fabBtn"
+    class="fixed bottom-20 md:bottom-10 right-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full p-4 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-105 transition-all duration-300 z-40 flex items-center justify-center cursor-pointer"
+    title="Nova Unidade">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 relative z-10" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+    </svg>
+</button>
+
+<!-- Modal: Nova Unidade -->
+<div id="modalNovaUnidade"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4 transition-opacity">
+    <div class="modal-card bg-white w-full max-w-md overflow-hidden transform transition-all">
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+            <h2 class="text-xl font-bold text-slate-800 tracking-tight">Nova Unidade</h2>
+            <button id="btnCloseModal"
+                class="text-slate-400 hover:text-slate-600 text-2xl leading-none transition-colors">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Lote *</label>
+                <select id="unitLot" class="w-full border rounded p-2 text-sm">
+                    <option value="">Carregando lotes...</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Modelo *</label>
+                    <input type="text" id="unitModelName" class="w-full border rounded p-2 text-sm"
+                        placeholder="Ex: iPhone 15 Pro">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Armazenamento (GB)</label>
+                    <input type="number" id="unitStorageGb" class="w-full border rounded p-2 text-sm" placeholder="256">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Serial / IMEI *</label>
+                <input type="text" id="unitSerial" class="w-full border rounded p-2 text-sm" placeholder="Serial único">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Custo USD *</label>
+                <input type="number" id="unitUsdCost" class="w-full border rounded p-2 text-sm" placeholder="0.00"
+                    step="0.01" min="0">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Quantidade *</label>
+                    <input type="number" id="unitQuantity" class="w-full border rounded p-2 text-sm" value="1" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Holder</label>
+                    <input type="text" id="unitHolder" class="w-full border rounded p-2 text-sm"
+                        placeholder="Com quem está (opcional)">
+                </div>
+            </div>
+        </div>
+        <div class="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end space-x-3">
+            <button id="btnCancelModal"
+                class="px-5 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 text-sm font-semibold transition-colors">Cancelar</button>
+            <button id="btnSaveUnit"
+                class="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow-sm transition-colors">Salvar</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let dtTable;
+
+    $(document).ready(function () {
+        dtTable = $('#inventoryTable').DataTable({
+            ajax: '/api/units',
+            responsive: true,
+            columns: [
+                { data: 'serial', responsivePriority: 3 },
+                { data: 'model_label', responsivePriority: 1 },
+                {
+                    data: 'holder',
+                    responsivePriority: 5,
+                    render: function (data, type, row) {
+                        if (type !== 'display') return data;
+                        return `<input type="text" class="border rounded p-1 w-28 text-sm edit-holder" data-id="${row.id}" value="${data || ''}">`;
+                    }
+                },
+                {
+                    data: 'total_cost_brl',
+                    responsivePriority: 4,
+                    render: function (data) {
+                        return `R$ ${parseFloat(data).toFixed(2)}`;
+                    }
+                },
+                {
+                    data: 'status',
+                    responsivePriority: 2,
+                    render: function (data, type, row) {
+                        if (type !== 'display') return data;
+                        return `
+                        <select class="border rounded p-1 w-28 text-sm edit-status" data-id="${row.id}">
+                            <option value="AVAILABLE" ${data === 'AVAILABLE' ? 'selected' : ''}>Disponível</option>
+                            <option value="SOLD" ${data === 'SOLD' ? 'selected' : ''}>Vendido</option>
+                            <option value="DEFECT" ${data === 'DEFECT' ? 'selected' : ''}>Defeito</option>
+                        </select>`;
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    responsivePriority: 1,
+                    render: function (data, type, row) {
+                        return `
+                        <div class="flex space-x-1">
+                            <a href="/unidade/${row.id}" class="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 rounded border border-blue-300">Ver</a>
+                        </div>`;
+                    }
+                }
+            ],
+            language: {
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
+            },
+            order: [[0, 'asc']]
+        });
+
+        $('#inventoryTable tbody').on('blur', '.edit-holder', function () {
+            updateUnit($(this).data('id'), { holder: $(this).val() });
+        });
+
+        $('#inventoryTable tbody').on('change', '.edit-status', function () {
+            updateUnit($(this).data('id'), { status: $(this).val() });
+        });
+
+        function updateUnit(id, data) {
+            fetch(`/api/unit/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(res => res.json()).then(res => {
+                if (res.success) showToast('Atualizado!');
+                else showToast(res.error || 'Erro', true);
+            });
+        }
+    });
+
+    // Modal logic
+    const modal = document.getElementById('modalNovaUnidade');
+
+    function openModal() {
+        // Load lots into select
+        fetch('/api/lots').then(r => r.json()).then(res => {
+            const select = document.getElementById('unitLot');
+            if (!res.data || !res.data.length) {
+                select.innerHTML = '<option value="">Nenhum lote cadastrado — crie um em Lotes</option>';
+            } else {
+                select.innerHTML = '<option value="">Selecione um lote...</option>' +
+                    res.data.map(l => `<option value="${l.id}">${l.purchased_at} — ${l.supplier} (R$ ${parseFloat(l.exchange_rate).toFixed(4)})</option>`).join('');
+            }
+        });
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.getElementById('unitLot').value = '';
+        document.getElementById('unitModelName').value = '';
+        document.getElementById('unitStorageGb').value = '';
+        document.getElementById('unitSerial').value = '';
+        document.getElementById('unitUsdCost').value = '';
+        document.getElementById('unitQuantity').value = '1';
+        document.getElementById('unitHolder').value = '';
+    }
+
+    document.getElementById('fabBtn').addEventListener('click', openModal);
+    document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+    document.getElementById('btnCancelModal').addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+    document.getElementById('btnSaveUnit').addEventListener('click', function () {
+        const lot_id = document.getElementById('unitLot').value;
+        const model_name = document.getElementById('unitModelName').value.trim();
+        const storage_gb = document.getElementById('unitStorageGb').value;
+        const serial = document.getElementById('unitSerial').value.trim();
+        const usd_cost = document.getElementById('unitUsdCost').value;
+        const quantity = document.getElementById('unitQuantity').value;
+        const holder = document.getElementById('unitHolder').value.trim();
+
+        if (!lot_id) { alert('Selecione um lote.'); return; }
+        if (!model_name) { alert('Informe o modelo.'); return; }
+        if (!serial) { alert('Informe o serial.'); return; }
+        if (!usd_cost || parseFloat(usd_cost) <= 0) { alert('Informe o custo USD.'); return; }
+        if (!quantity || parseInt(quantity) < 1) { alert('Quantidade inválida.'); return; }
+
+        fetch('/api/unit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lot_id, model_name, storage_gb: storage_gb || null, serial, usd_cost, quantity: parseInt(quantity), holder: holder || null })
+        }).then(r => r.json()).then(res => {
+            if (res.id) {
+                showToast('Unidade(s) criada(s)!');
+                closeModal();
+                dtTable.ajax.reload();
+            } else {
+                showToast(res.error || 'Erro ao criar unidade', true);
+            }
+        });
+    });
+</script>
+{% endblock %}

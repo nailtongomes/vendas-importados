@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Unidade: {{ unit.serial }}</h1>
+    <a href="{{ url_for('web.inventory') }}" class="text-blue-600 hover:underline">&larr; Voltar</a>
+</div>
+
+<div class="space-y-4">
+
+    <!-- Bloco 1: Dados principais -->
+    <div class="bg-white rounded shadow p-4">
+        <h2 class="text-lg font-semibold border-b pb-2 mb-3">1. Dados Principais</h2>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="text-gray-500">Modelo:</div>
+            <div>{{ unit.product_model.name }}{% if unit.product_model.storage_gb %} {{ unit.product_model.storage_gb }}GB{% endif %}</div>
+            <div class="text-gray-500">Lote:</div>
+            <div>#{{ unit.purchase_lot_id }} — {{ unit.purchase_lot.supplier }}</div>
+            <div class="text-gray-500">Câmbio do lote:</div>
+            <div>R$ {{ unit.purchase_lot.exchange_rate }}</div>
+            <div class="text-gray-500">Custo USD:</div>
+            <div class="font-bold">$ {{ unit.usd_cost }}</div>
+            <div class="text-gray-500">Status:</div>
+            <div class="font-bold">{{ unit.status.value }}</div>
+            <div class="text-gray-500">Custo Total (R$):</div>
+            <div class="font-bold text-blue-700" id="totalCostDisplay">Calculando...</div>
+        </div>
+    </div>
+
+    <!-- Bloco 2: Custos -->
+    <div class="bg-white rounded shadow p-4">
+        <div class="flex justify-between items-center border-b pb-2 mb-3">
+            <h2 class="text-lg font-semibold">2. Custos</h2>
+            {% if unit.status.value != 'SOLD' %}
+            <button id="btnAddCost" class="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700">+ Adicionar</button>
+            {% endif %}
+        </div>
+
+        <!-- Add cost form (hidden by default) -->
+        {% if unit.status.value != 'SOLD' %}
+        <div id="addCostForm" class="hidden bg-gray-50 border rounded p-3 mb-3 grid grid-cols-1 sm:grid-cols-4 gap-2 text-sm">
+            <select id="newCostType" class="border rounded p-2">
+                <option value="freight_intl">Frete Internacional</option>
+                <option value="freight_br">Frete Nacional</option>
+                <option value="insurance">Seguro</option>
+                <option value="card_fee">IOF / Taxa Cartão</option>
+                <option value="import_tax">Imposto Importação</option>
+                <option value="broker_fee">Taxa Intermediário</option>
+                <option value="invoice_tax">Imposto Nota</option>
+                <option value="other">Outro</option>
+            </select>
+            <input type="number" id="newCostValue" class="border rounded p-2" placeholder="Valor (R$)" step="0.01" min="0">
+            <input type="text" id="newCostNotes" class="border rounded p-2" placeholder="Observação (opcional)">
+            <div class="flex space-x-2">
+                <button id="btnSaveCost" class="flex-1 bg-green-600 text-white rounded p-2 hover:bg-green-700">Salvar</button>
+                <button id="btnCancelCost" class="flex-1 bg-gray-300 text-gray-700 rounded p-2 hover:bg-gray-400">Cancelar</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-600">
+                        <th class="p-2 text-left border-b">Tipo</th>
+                        <th class="p-2 text-right border-b">Valor (R$)</th>
+                        <th class="p-2 text-left border-b">Origem</th>
+                        <th class="p-2 text-left border-b">Obs</th>
+                        <th class="p-2 border-b"></th>
+                    </tr>
+                </thead>
+                <tbody id="costsBody">
+                    <tr><td colspan="5" class="p-3 text-gray-400 text-center">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bloco 3: Simular e Vender -->
+    <div class="bg-blue-50 border border-blue-200 rounded shadow p-4">
+        <h2 class="text-lg font-semibold border-b border-blue-200 pb-2 mb-3">3. Simular e Vender</h2>
+        <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-600">Preço Venda (R$)</label>
+                    <input type="number" id="simSell" class="w-full border rounded p-2" placeholder="0.00" step="0.01">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Comissão (R$)</label>
+                    <input type="number" id="simCom" class="w-full border rounded p-2" placeholder="0.00" value="0.00" step="0.01">
+                </div>
+            </div>
+
+            <div class="bg-white p-3 rounded border text-sm grid grid-cols-2 gap-2">
+                <div>Custo Total:</div>
+                <div class="font-bold text-right" id="simCostDisplay">R$ 0.00</div>
+                <div>Lucro Líquido:</div>
+                <div id="simProfit" class="font-bold text-right text-gray-500">R$ 0.00</div>
+                <div>Margem Líquida:</div>
+                <div id="simMargin" class="font-bold text-right text-gray-500">0.00%</div>
+            </div>
+
+            {% if unit.status.value != 'SOLD' %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm text-gray-600">Data da venda</label>
+                    <input type="date" id="saleDate" class="w-full border rounded p-2">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Canal</label>
+                    <input type="text" id="saleChannel" class="w-full border rounded p-2" placeholder="Ex: WhatsApp, OLX...">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600">Observações</label>
+                <input type="text" id="saleNotes" class="w-full border rounded p-2" placeholder="Opcional">
+            </div>
+            <button id="btnSell"
+                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow">
+                Confirmar Venda
+            </button>
+            {% else %}
+            <div class="text-center text-red-600 font-bold mt-2 p-3 bg-red-50 border border-red-200 rounded">
+                Esta unidade já está vendida.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const APP_DATA = {
+        unitId: {{ unit.id }},
+        totalCost: 0,
+        isSold: {{ 'true' if unit.status.value == 'SOLD' else 'false' }}
+    };
+
+    const COST_TYPE_LABELS = {
+        freight_intl: 'Frete Internacional',
+        freight_br: 'Frete Nacional',
+        insurance: 'Seguro',
+        card_fee: 'IOF / Taxa Cartão',
+        import_tax: 'Imposto Importação',
+        broker_fee: 'Taxa Intermediário',
+        invoice_tax: 'Imposto Nota',
+        other: 'Outro'
+    };
+
+    // Set today as default sale date
+    const saleDateEl = document.getElementById('saleDate');
+    if (saleDateEl) saleDateEl.value = new Date().toISOString().split('T')[0];
+
+    function loadCosts() {
+        fetch(`/api/unit/${APP_DATA.unitId}/costs`)
+            .then(r => r.json())
+            .then(res => {
+                renderCosts(res.data);
+            });
+
+        // Also pull total_cost_brl for simulation accuracy
+        fetch('/api/units')
+            .then(r => r.json())
+            .then(res => {
+                const u = res.data.find(x => x.id === APP_DATA.unitId);
+                if (u) {
+                    APP_DATA.totalCost = parseFloat(u.total_cost_brl);
+                    document.getElementById('totalCostDisplay').textContent = 'R$ ' + APP_DATA.totalCost.toFixed(2);
+                    document.getElementById('simCostDisplay').textContent = 'R$ ' + APP_DATA.totalCost.toFixed(2);
+                    updateSimulation();
+                }
+            });
+    }
+
+    function renderCosts(costs) {
+        const tbody = document.getElementById('costsBody');
+        if (!costs || !costs.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="p-3 text-gray-400 text-center">Nenhum custo cadastrado</td></tr>';
+            return;
+        }
+        tbody.innerHTML = costs.map(c => `
+            <tr class="border-b last:border-0 hover:bg-gray-50">
+                <td class="p-2">${COST_TYPE_LABELS[c.cost_type] || c.cost_type}</td>
+                <td class="p-2 text-right font-mono">R$ ${parseFloat(c.brl_value).toFixed(2)}</td>
+                <td class="p-2">
+                    <span class="text-xs px-2 py-0.5 rounded ${c.source === 'manual' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}">
+                        ${c.source === 'manual' ? 'Manual' : 'Rateado'}
+                    </span>
+                </td>
+                <td class="p-2 text-gray-500 text-sm">${c.notes || ''}</td>
+                <td class="p-2">
+                    ${(!APP_DATA.isSold && c.source === 'manual') ? `<button onclick="deleteCost(${c.id})" class="text-red-400 hover:text-red-600 text-xs">Remover</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function deleteCost(costId) {
+        if (!confirm('Remover este custo?')) return;
+        fetch(`/api/cost/${costId}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast('Custo removido');
+                    loadCosts();
+                } else {
+                    showToast(res.error || 'Erro ao remover', true);
+                }
+            });
+    }
+
+    // Add cost form toggle
+    const btnAddCost = document.getElementById('btnAddCost');
+    if (btnAddCost) {
+        const addCostForm = document.getElementById('addCostForm');
+        btnAddCost.addEventListener('click', () => addCostForm.classList.toggle('hidden'));
+
+        document.getElementById('btnCancelCost').addEventListener('click', () => {
+            addCostForm.classList.add('hidden');
+            document.getElementById('newCostValue').value = '';
+            document.getElementById('newCostNotes').value = '';
+        });
+
+        document.getElementById('btnSaveCost').addEventListener('click', () => {
+            const cost_type = document.getElementById('newCostType').value;
+            const brl_value = document.getElementById('newCostValue').value;
+            const notes = document.getElementById('newCostNotes').value;
+            if (!brl_value || parseFloat(brl_value) <= 0) {
+                alert('Informe um valor maior que zero.');
+                return;
+            }
+            fetch(`/api/unit/${APP_DATA.unitId}/costs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cost_type, brl_value, notes })
+            }).then(r => r.json()).then(res => {
+                if (res.id) {
+                    showToast('Custo adicionado');
+                    addCostForm.classList.add('hidden');
+                    document.getElementById('newCostValue').value = '';
+                    document.getElementById('newCostNotes').value = '';
+                    loadCosts();
+                } else {
+                    showToast(res.error || 'Erro ao salvar', true);
+                }
+            });
+        });
+    }
+
+    // Price simulation
+    function updateSimulation() {
+        const p = parseFloat(document.getElementById('simSell').value) || 0;
+        const c = parseFloat(document.getElementById('simCom').value) || 0;
+        const profit = p - APP_DATA.totalCost - c;
+        const margin = p > 0 ? (profit / p) * 100 : 0;
+
+        const profitEl = document.getElementById('simProfit');
+        const marginEl = document.getElementById('simMargin');
+        profitEl.textContent = `R$ ${profit.toFixed(2)}`;
+        marginEl.textContent = `${margin.toFixed(2)}%`;
+
+        const cls = profit < 0 ? 'text-red-500' : 'text-green-600';
+        profitEl.className = `font-bold text-right ${cls}`;
+        marginEl.className = `font-bold text-right ${cls}`;
+    }
+
+    document.getElementById('simSell').addEventListener('input', updateSimulation);
+    document.getElementById('simCom').addEventListener('input', updateSimulation);
+
+    // Sell action
+    const btnSell = document.getElementById('btnSell');
+    if (btnSell) {
+        btnSell.addEventListener('click', function () {
+            const sellPrice = document.getElementById('simSell').value;
+            const com = document.getElementById('simCom').value;
+            const channel = document.getElementById('saleChannel').value;
+            const notes = document.getElementById('saleNotes').value;
+
+            if (!sellPrice || parseFloat(sellPrice) <= 0) {
+                alert('Informe o preço de venda para confirmar.');
+                return;
+            }
+
+            fetch(`/api/unit/${APP_DATA.unitId}/sell`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sell_price_brl: sellPrice,
+                    commission_brl: com || '0',
+                    channel: channel || null,
+                    notes: notes || null
+                })
+            }).then(r => r.json()).then(res => {
+                if (res.success) {
+                    showToast('Venda registrada!');
+                    setTimeout(() => { window.location.href = '/estoque'; }, 1200);
+                } else {
+                    showToast('Erro: ' + (res.error || 'Falha ao registrar'), true);
+                }
+            });
+        });
+    }
+
+    // Init
+    loadCosts();
+</script>
+{% endblock %}
