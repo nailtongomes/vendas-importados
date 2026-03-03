@@ -1,0 +1,11 @@
+services:
+  web:
+    image: ghcr.io/nailtongomes/vendas-importados:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - imports-data:/app/instance  # persists the SQLite database
+    restart: unless-stopped
+
+volumes:
+  imports-data:
