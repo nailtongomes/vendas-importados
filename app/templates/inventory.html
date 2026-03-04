@@ -152,22 +152,44 @@
         });
 
         $('#inventoryTable tbody').on('blur', '.edit-holder', function () {
-            updateUnit($(this).data('id'), { holder: $(this).val() });
+            var el = $(this);
+            updateUnit(el.data('id'), { holder: el.val() });
         });
 
         $('#inventoryTable tbody').on('change', '.edit-status', function () {
-            updateUnit($(this).data('id'), { status: $(this).val() });
+            var el = $(this);
+            var newStatus = el.val();
+            if (newStatus === 'SOLD') {
+                if (!confirm('Marcar esta unidade como VENDIDA?')) {
+                    // Revert select to previous value
+                    el.val(el.data('prev') || 'AVAILABLE');
+                    return;
+                }
+            }
+            updateUnit(el.data('id'), { status: newStatus });
+        });
+
+        // Store previous status value on focus
+        $('#inventoryTable tbody').on('focus', '.edit-status', function () {
+            $(this).data('prev', $(this).val());
         });
 
         function updateUnit(id, data) {
-            fetch(`/api/unit/${id}`, {
+            guardedFetch(`/api/unit/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
-            }).then(res => res.json()).then(res => {
-                if (res.success) showToast('Atualizado!');
-                else showToast(res.error || 'Erro', true);
-            });
+            }).then(function (res) {
+                if (!res) return;
+                return res.json().then(function (body) {
+                    if (res.ok && body.success) {
+                        showToast('Atualizado!');
+                        dtTable.ajax.reload(null, false);
+                    } else {
+                        showToast(body.error || 'Erro', true);
+                    }
+                });
+            }).catch(function () { /* handled by guard */ });
         }
     });
 
@@ -219,18 +241,20 @@
         if (!usd_cost || parseFloat(usd_cost) <= 0) { alert('Informe o custo USD.'); return; }
         if (!quantity || parseInt(quantity) < 1) { alert('Quantidade inválida.'); return; }
 
-        fetch('/api/unit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lot_id, model_name, storage_gb: storage_gb || null, serial, usd_cost, quantity: parseInt(quantity), holder: holder || null })
-        }).then(r => r.json()).then(res => {
-            if (res.id) {
-                showToast('Unidade(s) criada(s)!');
-                closeModal();
-                dtTable.ajax.reload();
-            } else {
-                showToast(res.error || 'Erro ao criar unidade', true);
-            }
+        guardedAction('create-unit', function () {
+            return fetch('/api/unit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lot_id, model_name, storage_gb: storage_gb || null, serial, usd_cost, quantity: parseInt(quantity), holder: holder || null })
+            }).then(function (r) { return r.json(); }).then(function (res) {
+                if (res.id) {
+                    showToast('Unidade(s) criada(s)!');
+                    closeModal();
+                    dtTable.ajax.reload();
+                } else {
+                    showToast(res.error || 'Erro ao criar unidade', true);
+                }
+            });
         });
     });
 </script>

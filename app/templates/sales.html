@@ -185,18 +185,21 @@
         });
 
         function updateSale(id, data) {
-            fetch(`/api/sale/${id}`, {
+            guardedFetch(`/api/sale/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
-            }).then(res => res.json()).then(res => {
-                if (res.success) {
-                    showToast('Atualizado!');
-                    loadSales();
-                } else {
-                    showToast(res.error || 'Erro', true);
-                }
-            });
+            }).then(function (res) {
+                if (!res) return; // guarded duplicate
+                return res.json().then(function (body) {
+                    if (res.ok && body.success) {
+                        showToast('Atualizado!');
+                        loadSales();
+                    } else {
+                        showToast(body.error || 'Erro ao atualizar', true);
+                    }
+                });
+            }).catch(function () { /* handled by guard */ });
         }
     }
 

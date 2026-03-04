@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css" />
     <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js"></script>
+    <script src="{{ url_for('static', filename='js/request-guard.js') }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -62,6 +63,10 @@
                     <a href="{{ url_for('web.sales') }}"
                         class="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-800 {% if request.endpoint == 'web.sales' %}bg-slate-800 text-blue-400{% endif %}">Vendas</a>
                 </div>
+                <form method="POST" action="{{ url_for('web.logout') }}" class="ml-4">
+                    <button type="submit"
+                        class="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">Sair</button>
+                </form>
             </div>
         </div>
     </nav>

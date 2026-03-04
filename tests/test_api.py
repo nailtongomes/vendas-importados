@@ -18,7 +18,11 @@ def app():
 
 @pytest.fixture
 def client(app):
-    return app.test_client()
+    client = app.test_client()
+    # Authenticate the test client
+    with client.session_transaction() as sess:
+        sess['authenticated'] = True
+    return client
 
 @pytest.fixture
 def init_db(app):

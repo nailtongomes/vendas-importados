@@ -257,18 +257,20 @@
         if (!supplier) { alert('Informe o fornecedor.'); return; }
         if (!exchange_rate || parseFloat(exchange_rate) <= 0) { alert('Informe o câmbio.'); return; }
 
-        fetch('/api/lots', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ supplier, exchange_rate, purchased_at: purchased_at || null, notes: notes || null })
-        }).then(r => r.json()).then(res => {
-            if (res.id) {
-                showToast('Lote criado!');
-                closeNovoLote();
-                loadLots();
-            } else {
-                showToast(res.error || 'Erro ao criar lote', true);
-            }
+        guardedAction('create-lot', function () {
+            return fetch('/api/lots', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ supplier, exchange_rate, purchased_at: purchased_at || null, notes: notes || null })
+            }).then(r => r.json()).then(res => {
+                if (res.id) {
+                    showToast('Lote criado!');
+                    closeNovoLote();
+                    loadLots();
+                } else {
+                    showToast(res.error || 'Erro ao criar lote', true);
+                }
+            });
         });
     });
 
@@ -333,18 +335,20 @@
             return;
         }
 
-        fetch(`/api/lot/${currentAllocateLotId}/allocate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(r => r.json()).then(res => {
-            if (res.success) {
-                showToast('Custos rateados com sucesso!');
-                modalAllocate.classList.add('hidden');
-                loadLots();
-            } else {
-                showToast(res.error || 'Erro no rateio', true);
-            }
+        guardedAction('allocate-' + currentAllocateLotId, function () {
+            return fetch(`/api/lot/${currentAllocateLotId}/allocate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(res => {
+                if (res.success) {
+                    showToast('Custos rateados com sucesso!');
+                    modalAllocate.classList.add('hidden');
+                    loadLots();
+                } else {
+                    showToast(res.error || 'Erro no rateio', true);
+                }
+            });
         });
     });
 
