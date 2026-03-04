@@ -62,6 +62,10 @@
                     <a href="{{ url_for('web.sales') }}"
                         class="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-slate-800 {% if request.endpoint == 'web.sales' %}bg-slate-800 text-blue-400{% endif %}">Vendas</a>
                 </div>
+                <form method="POST" action="{{ url_for('web.logout') }}" class="ml-4">
+                    <button type="submit"
+                        class="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">Sair</button>
+                </form>
             </div>
         </div>
     </nav>

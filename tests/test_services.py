@@ -28,7 +28,12 @@ def test_base_brl():
 
 def test_total_cost_brl(app):
     base_brl = Decimal('2625.00')
-    unit = Unit(serial='123', product_model_id=1, purchase_lot_id=1, usd_cost=Decimal('500.00')) # mocked
+    lot = PurchaseLot(supplier="Test", exchange_rate=Decimal('5.0000'))
+    model = ProductModel(name="Test")
+    db.session.add_all([lot, model])
+    db.session.commit()
+
+    unit = Unit(serial='123', product_model_id=model.id, purchase_lot_id=lot.id, usd_cost=Decimal('500.00'))
     db.session.add(unit)
     db.session.commit()
     

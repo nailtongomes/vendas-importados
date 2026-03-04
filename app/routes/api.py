@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from app import db
 from app.models import Unit, ProductModel, PurchaseLot, UnitCost, Sale, CostSource, CostType
 from app.services import get_base_brl, get_total_cost_brl, get_net_profit, get_net_margin, allocate_lot_costs, sell_unit, create_manual_cost
+from app.auth import api_login_required
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 
@@ -12,6 +13,7 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 # ── Units ──────────────────────────────────────────────────────────────────────
 
 @bp.route('/units', methods=['GET'])
+@api_login_required
 def get_units():
     units = Unit.query.options(
         joinedload(Unit.product_model),
@@ -37,6 +39,7 @@ def get_units():
 
 
 @bp.route('/unit', methods=['POST'])
+@api_login_required
 def create_unit():
     data = request.json or {}
     required = ['lot_id', 'serial', 'usd_cost', 'model_name']
@@ -79,27 +82,33 @@ def create_unit():
     base_serial = data['serial']
     created_units = []
 
-    for i in range(quantity):
-        # Generate unique serial if quantity > 1
-        current_serial = base_serial if quantity == 1 else f"{base_serial}-{i+1}"
-        
-        # Check if this specific serial exists
-        if Unit.query.filter_by(serial=current_serial).first():
-            if quantity == 1:
-                return jsonify({'error': 'Serial já cadastrado'}), 409
-            else:
-                current_serial = f"{base_serial}-{int(datetime.now().timestamp())}-{i+1}"
-                
-        unit = Unit(
-            serial=current_serial,
-            product_model_id=product_model.id,
-            purchase_lot_id=lot.id,
-            usd_cost=usd_cost,
-            holder=data.get('holder') or None
-        )
-        db.session.add(unit)
+    try:
+        for i in range(quantity):
+            # Generate unique serial if quantity > 1
+            current_serial = base_serial if quantity == 1 else f"{base_serial}-{i+1}"
+
+            # Check if this specific serial exists
+            if Unit.query.filter_by(serial=current_serial).first():
+                if quantity == 1:
+                    db.session.rollback()
+                    return jsonify({'error': 'Serial já cadastrado'}), 409
+                else:
+                    current_serial = f"{base_serial}-{int(datetime.now().timestamp())}-{i+1}"
+
+            unit = Unit(
+                serial=current_serial,
+                product_model_id=product_model.id,
+                purchase_lot_id=lot.id,
+                usd_cost=usd_cost,
+                holder=data.get('holder') or None
+            )
+            db.session.add(unit)
+            created_units.append(unit)
+
         db.session.commit()
-        created_units.append(unit)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erro ao criar unidade: {str(e)}'}), 500
 
     # Return the first created unit as response, the rest will update via reload
     unit = created_units[0]
@@ -118,6 +127,7 @@ def create_unit():
 
 
 @bp.route('/unit/<int:id>', methods=['PATCH'])
+@api_login_required
 def update_unit(id):
     unit = Unit.query.get_or_404(id)
     data = request.json or {}
@@ -148,11 +158,16 @@ def update_unit(id):
         except InvalidOperation:
             return jsonify({'error': 'usd_cost inválido'}), 400
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erro ao atualizar: {str(e)}'}), 500
     return jsonify({'success': True})
 
 
 @bp.route('/unit/<int:id>/sell', methods=['POST'])
+@api_login_required
 def api_sell_unit(id):
     data = request.json or {}
     try:
@@ -174,6 +189,7 @@ def api_sell_unit(id):
 # ── Costs ──────────────────────────────────────────────────────────────────────
 
 @bp.route('/unit/<int:id>/costs', methods=['GET'])
+@api_login_required
 def get_unit_costs(id):
     unit = Unit.query.get_or_404(id)
     costs = []
@@ -189,6 +205,7 @@ def get_unit_costs(id):
 
 
 @bp.route('/unit/<int:id>/costs', methods=['POST'])
+@api_login_required
 def add_unit_cost(id):
     Unit.query.get_or_404(id)
     data = request.json or {}
@@ -218,18 +235,24 @@ def add_unit_cost(id):
 
 
 @bp.route('/cost/<int:id>', methods=['DELETE'])
+@api_login_required
 def delete_cost(id):
     cost = UnitCost.query.get_or_404(id)
     if cost.source == CostSource.ALLOCATED:
         return jsonify({'error': 'Custos rateados não podem ser removidos individualmente. Use o re-rateio do lote.'}), 400
     db.session.delete(cost)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erro ao remover custo: {str(e)}'}), 500
     return jsonify({'success': True})
 
 
 # ── Lots ───────────────────────────────────────────────────────────────────────
 
 @bp.route('/lots', methods=['GET'])
+@api_login_required
 def get_lots():
     lots = PurchaseLot.query.options(
         joinedload(PurchaseLot.units).joinedload(Unit.costs)
@@ -258,6 +281,7 @@ def get_lots():
 
 
 @bp.route('/lots', methods=['POST'])
+@api_login_required
 def create_lot():
     data = request.json or {}
     if not data.get('supplier'):
@@ -284,7 +308,11 @@ def create_lot():
         notes=data.get('notes') or None
     )
     db.session.add(lot)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erro ao criar lote: {str(e)}'}), 500
 
     return jsonify({
         'id': lot.id,
@@ -299,6 +327,7 @@ def create_lot():
 
 
 @bp.route('/lot/<int:id>/units', methods=['GET'])
+@api_login_required
 def get_lot_units(id):
     PurchaseLot.query.get_or_404(id)
     units = Unit.query.options(
@@ -324,6 +353,7 @@ def get_lot_units(id):
 
 
 @bp.route('/lot/<int:id>/allocate', methods=['POST'])
+@api_login_required
 def api_allocate_lot(id):
     data = request.json or {}
     try:
@@ -336,6 +366,7 @@ def api_allocate_lot(id):
 # ── Sales ──────────────────────────────────────────────────────────────────────
 
 @bp.route('/sales', methods=['GET'])
+@api_login_required
 def get_sales():
     sales = Sale.query.options(
         joinedload(Sale.unit).joinedload(Unit.product_model),
@@ -364,6 +395,7 @@ def get_sales():
     return jsonify({'data': data})
 
 @bp.route('/sale/<int:id>', methods=['PATCH'])
+@api_login_required
 def update_sale(id):
     sale = Sale.query.get_or_404(id)
     data = request.json or {}
@@ -382,14 +414,19 @@ def update_sale(id):
 
     if 'channel' in data:
         sale.channel = data['channel'] or None
-        
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erro ao atualizar venda: {str(e)}'}), 500
     return jsonify({'success': True})
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
 @bp.route('/kpis', methods=['GET'])
+@api_login_required
 def get_kpis():
     units = Unit.query.options(
         joinedload(Unit.costs),
@@ -435,6 +472,7 @@ def get_kpis():
 # ── WhatsApp ───────────────────────────────────────────────────────────────────
 
 @bp.route('/unit/<int:id>/whatsapp', methods=['GET'])
+@api_login_required
 def get_whatsapp_text(id):
     unit = Unit.query.options(
         joinedload(Unit.product_model),
