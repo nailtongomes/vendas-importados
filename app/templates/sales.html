@@ -103,6 +103,11 @@
 
         $('#salesTable').DataTable({
             data: data,
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copyHtml5', text: 'Copiar', exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8] } },
+                { extend: 'excelHtml5', text: 'Excel', exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8] } }
+            ],
             columns: [
                 { data: 'sold_at', responsivePriority: 3 },
                 { data: 'serial', responsivePriority: 5 },

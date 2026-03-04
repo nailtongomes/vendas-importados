@@ -1,12 +1,41 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
 
-from app.auth import login_required, check_credentials
+from app.auth import login_required, check_credentials, needs_setup
 
 bp = Blueprint('web', __name__)
 
 
+@bp.route('/setup', methods=['GET', 'POST'])
+def setup():
+    if not needs_setup():
+        return redirect(url_for('web.login'))
+    error = None
+    if request.method == 'POST':
+        from app.models import AdminUser
+        from app import db
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        password_confirm = request.form.get('password_confirm', '')
+        if not username:
+            error = 'Informe o nome de usuário.'
+        elif len(password) < 8:
+            error = 'A senha deve ter no mínimo 8 caracteres.'
+        elif password != password_confirm:
+            error = 'As senhas não conferem.'
+        else:
+            admin = AdminUser(username=username)
+            admin.set_password(password)
+            db.session.add(admin)
+            db.session.commit()
+            session['authenticated'] = True
+            return redirect(url_for('web.dashboard'))
+    return render_template('setup.html', error=error)
+
+
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if needs_setup():
+        return redirect(url_for('web.setup'))
     if session.get('authenticated'):
         return redirect(url_for('web.dashboard'))
     error = None

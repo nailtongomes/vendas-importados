@@ -7,6 +7,15 @@
 </div>
 
 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6 overflow-x-auto">
+    <div class="mb-4 flex items-center gap-3">
+        <label class="text-sm font-medium text-slate-600">Filtrar status:</label>
+        <select id="statusFilter" class="border rounded p-1.5 text-sm w-40">
+            <option value="AVAILABLE" selected>Disponível</option>
+            <option value="SOLD">Vendido</option>
+            <option value="DEFECT">Defeito</option>
+            <option value="">Todos</option>
+        </select>
+    </div>
     <table id="inventoryTable"
         class="w-full text-left text-sm display responsive nowrap">
         <thead>
@@ -102,6 +111,11 @@
         dtTable = $('#inventoryTable').DataTable({
             ajax: '/api/units',
             responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copyHtml5', text: 'Copiar', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                { extend: 'excelHtml5', text: 'Excel', exportOptions: { columns: [0, 1, 2, 3, 4] } }
+            ],
             columns: [
                 { data: 'serial', responsivePriority: 3 },
                 { data: 'model_label', responsivePriority: 1 },
@@ -138,9 +152,11 @@
                     orderable: false,
                     responsivePriority: 1,
                     render: function (data, type, row) {
+                        var safeSerial = $('<span>').text(row.serial).html();
                         return `
                         <div class="flex space-x-1">
                             <a href="/unidade/${row.id}" class="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 rounded border border-blue-300">Ver</a>
+                            <button class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 rounded border border-red-300 btn-delete" data-id="${row.id}" data-serial="${safeSerial}">Excluir</button>
                         </div>`;
                     }
                 }
@@ -148,7 +164,24 @@
             language: {
                 url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
             },
-            order: [[0, 'asc']]
+            order: [[0, 'asc']],
+            initComplete: function () {
+                // Apply default status filter
+                var filterVal = $('#statusFilter').val();
+                if (filterVal) {
+                    this.api().column(4).search('^' + filterVal + '$', true, false).draw();
+                }
+            }
+        });
+
+        // Status filter dropdown
+        $('#statusFilter').on('change', function () {
+            var val = $(this).val();
+            if (val) {
+                dtTable.column(4).search('^' + val + '$', true, false).draw();
+            } else {
+                dtTable.column(4).search('').draw();
+            }
         });
 
         $('#inventoryTable tbody').on('blur', '.edit-holder', function () {
@@ -172,6 +205,28 @@
         // Store previous status value on focus
         $('#inventoryTable tbody').on('focus', '.edit-status', function () {
             $(this).data('prev', $(this).val());
+        });
+
+        // Delete unit
+        $('#inventoryTable tbody').on('click', '.btn-delete', function () {
+            var id = $(this).data('id');
+            var serial = $(this).data('serial');
+            if (!confirm('Tem certeza que deseja excluir a unidade ' + serial + '? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+            guardedFetch('/api/unit/' + id, {
+                method: 'DELETE'
+            }).then(function (res) {
+                if (!res) return;
+                return res.json().then(function (body) {
+                    if (res.ok && body.success) {
+                        showToast('Unidade excluída!');
+                        dtTable.ajax.reload(null, false);
+                    } else {
+                        showToast(body.error || 'Erro ao excluir', true);
+                    }
+                });
+            }).catch(function () { /* handled by guard */ });
         });
 
         function updateUnit(id, data) {

@@ -1,5 +1,5 @@
 from app.models.base import db, migrate, Base
-from app.models.models import UnitStatus, CostSource, CostType, ProductModel, PurchaseLot, Unit, UnitCost, Sale
+from app.models.models import UnitStatus, CostSource, CostType, ProductModel, PurchaseLot, Unit, UnitCost, Sale, AdminUser
 
 __all__ = [
     "db",
@@ -13,4 +13,5 @@ __all__ = [
     "Unit",
     "UnitCost",
     "Sale",
+    "AdminUser",
 ]

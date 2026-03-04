@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - Imports Sys</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+
+<body class="bg-slate-50 flex items-center justify-center min-h-screen">
+    <div class="w-full max-w-sm p-8 bg-white rounded-2xl shadow-lg border border-slate-100">
+        <h1 class="text-2xl font-extrabold text-center text-slate-900 mb-2">
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">N3W</span>
+            <span class="block text-base font-medium text-slate-500 mt-1">Imports Sys</span>
+        </h1>
+        <p class="text-center text-sm text-slate-500 mb-6">Crie o usuário administrador para começar.</p>
+
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('web.setup') }}" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Usuário</label>
+                <input type="text" name="username" required autofocus
+                    class="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Senha</label>
+                <input type="password" name="password" required
+                    class="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Confirmar Senha</label>
+                <input type="password" name="password_confirm" required
+                    class="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100">
+            </div>
+            <button type="submit"
+                class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
+                Criar Admin
+            </button>
+        </form>
+    </div>
+</body>
+
+</html>
