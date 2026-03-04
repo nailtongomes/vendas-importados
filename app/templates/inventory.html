@@ -152,10 +152,11 @@
                     orderable: false,
                     responsivePriority: 1,
                     render: function (data, type, row) {
+                        var safeSerial = $('<span>').text(row.serial).html();
                         return `
                         <div class="flex space-x-1">
                             <a href="/unidade/${row.id}" class="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 rounded border border-blue-300">Ver</a>
-                            <button class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 rounded border border-red-300 btn-delete" data-id="${row.id}" data-serial="${row.serial}">Excluir</button>
+                            <button class="text-red-600 hover:text-red-800 text-xs font-medium px-2 py-1 rounded border border-red-300 btn-delete" data-id="${row.id}" data-serial="${safeSerial}">Excluir</button>
                         </div>`;
                     }
                 }

@@ -18,8 +18,8 @@ def setup():
         password_confirm = request.form.get('password_confirm', '')
         if not username:
             error = 'Informe o nome de usuário.'
-        elif len(password) < 4:
-            error = 'A senha deve ter no mínimo 4 caracteres.'
+        elif len(password) < 8:
+            error = 'A senha deve ter no mínimo 8 caracteres.'
         elif password != password_confirm:
             error = 'As senhas não conferem.'
         else:

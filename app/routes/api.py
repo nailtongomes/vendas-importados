@@ -189,10 +189,10 @@ def api_sell_unit(id):
 @api_login_required
 def delete_unit(id):
     unit = Unit.query.get_or_404(id)
-    # Delete associated sale first (FK constraint)
+    # Delete associated sale first (not cascade-configured, FK RESTRICT)
     if unit.sale:
         db.session.delete(unit.sale)
-    # Costs are cascade-deleted via relationship
+    # Costs are cascade-deleted via relationship (cascade="all, delete-orphan")
     db.session.delete(unit)
     try:
         db.session.commit()

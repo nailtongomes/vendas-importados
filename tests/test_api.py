@@ -180,20 +180,20 @@ def test_setup_creates_admin(client, app):
 
     response = client.post('/setup', data={
         'username': 'myadmin',
-        'password': 'secret123',
-        'password_confirm': 'secret123'
+        'password': 'secret1234',
+        'password_confirm': 'secret1234'
     }, follow_redirects=False)
     assert response.status_code == 302
 
     admin = AdminUser.query.filter_by(username='myadmin').first()
     assert admin is not None
-    assert admin.check_password('secret123')
+    assert admin.check_password('secret1234')
 
 
 def test_setup_blocked_after_admin_exists(client, app):
     """Test that setup page redirects to login if admin already exists."""
     admin = AdminUser(username='existing')
-    admin.set_password('pass1234')
+    admin.set_password('pass12345678')
     db.session.add(admin)
     db.session.commit()
 
@@ -206,8 +206,8 @@ def test_setup_password_mismatch(client, app):
     """Test setup rejects mismatched passwords."""
     response = client.post('/setup', data={
         'username': 'admin',
-        'password': 'pass1234',
-        'password_confirm': 'different'
+        'password': 'pass12345678',
+        'password_confirm': 'different123'
     })
     assert response.status_code == 200
     assert AdminUser.query.count() == 0
