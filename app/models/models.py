@@ -5,8 +5,24 @@ from typing import List, Optional
 
 from sqlalchemy import String, Numeric, ForeignKey, DateTime, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.models.base import db
+
+
+class AdminUser(db.Model):
+    __tablename__ = "admin_user"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
 
 class UnitStatus(str, Enum):
     AVAILABLE = "AVAILABLE"
