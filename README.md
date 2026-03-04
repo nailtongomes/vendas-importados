@@ -33,7 +33,8 @@ Estoque por serial, custo real auditavel, simulacao de preco e margem liquida em
 
 ```bash
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Linux/macOS
+# Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 export SECRET_KEY="sua-chave-secreta"

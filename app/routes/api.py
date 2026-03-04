@@ -90,7 +90,6 @@ def create_unit():
             # Check if this specific serial exists
             if Unit.query.filter_by(serial=current_serial).first():
                 if quantity == 1:
-                    db.session.rollback()
                     return jsonify({'error': 'Serial já cadastrado'}), 409
                 else:
                     current_serial = f"{base_serial}-{int(datetime.now().timestamp())}-{i+1}"
