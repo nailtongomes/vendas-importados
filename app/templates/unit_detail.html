@@ -199,16 +199,18 @@
 
     function deleteCost(costId) {
         if (!confirm('Remover este custo?')) return;
-        fetch(`/api/cost/${costId}`, { method: 'DELETE' })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    showToast('Custo removido');
-                    loadCosts();
-                } else {
-                    showToast(res.error || 'Erro ao remover', true);
-                }
-            });
+        guardedFetch(`/api/cost/${costId}`, { method: 'DELETE' })
+            .then(function (r) {
+                if (!r) return;
+                return r.json().then(function (res) {
+                    if (r.ok && res.success) {
+                        showToast('Custo removido');
+                        loadCosts();
+                    } else {
+                        showToast(res.error || 'Erro ao remover', true);
+                    }
+                });
+            }).catch(function () { /* handled by guard */ });
     }
 
     // Add cost form toggle
@@ -231,20 +233,22 @@
                 alert('Informe um valor maior que zero.');
                 return;
             }
-            fetch(`/api/unit/${APP_DATA.unitId}/costs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cost_type, brl_value, notes })
-            }).then(r => r.json()).then(res => {
-                if (res.id) {
-                    showToast('Custo adicionado');
-                    addCostForm.classList.add('hidden');
-                    document.getElementById('newCostValue').value = '';
-                    document.getElementById('newCostNotes').value = '';
-                    loadCosts();
-                } else {
-                    showToast(res.error || 'Erro ao salvar', true);
-                }
+            guardedAction('add-cost', function () {
+                return fetch(`/api/unit/${APP_DATA.unitId}/costs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cost_type, brl_value, notes })
+                }).then(r => r.json()).then(res => {
+                    if (res.id) {
+                        showToast('Custo adicionado');
+                        addCostForm.classList.add('hidden');
+                        document.getElementById('newCostValue').value = '';
+                        document.getElementById('newCostNotes').value = '';
+                        loadCosts();
+                    } else {
+                        showToast(res.error || 'Erro ao salvar', true);
+                    }
+                });
             });
         });
     }
@@ -283,22 +287,26 @@
                 return;
             }
 
-            fetch(`/api/unit/${APP_DATA.unitId}/sell`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sell_price_brl: sellPrice,
-                    commission_brl: com || '0',
-                    channel: channel || null,
-                    notes: notes || null
-                })
-            }).then(r => r.json()).then(res => {
-                if (res.success) {
-                    showToast('Venda registrada!');
-                    setTimeout(() => { window.location.href = '/estoque'; }, 1200);
-                } else {
-                    showToast('Erro: ' + (res.error || 'Falha ao registrar'), true);
-                }
+            if (!confirm('Confirmar venda desta unidade?')) return;
+
+            guardedAction('sell-unit', function () {
+                return fetch(`/api/unit/${APP_DATA.unitId}/sell`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sell_price_brl: sellPrice,
+                        commission_brl: com || '0',
+                        channel: channel || null,
+                        notes: notes || null
+                    })
+                }).then(r => r.json()).then(res => {
+                    if (res.success) {
+                        showToast('Venda registrada!');
+                        setTimeout(() => { window.location.href = '/estoque'; }, 1200);
+                    } else {
+                        showToast('Erro: ' + (res.error || 'Falha ao registrar'), true);
+                    }
+                });
             });
         });
     }
